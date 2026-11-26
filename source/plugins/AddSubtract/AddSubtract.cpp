@@ -3,15 +3,39 @@
 
 using namespace ffglex;
 
+enum ParamID : FFUInt32 {
+    PT_SF = 0,
+    PT_PX,
+    PT_PY,
+    PT_CX,
+    PT_CY,
+    PT_RC,
+    PT_BW,
+    PT_BC_R,
+    PT_BC_G,
+    PT_BC_B,
+    PT_BC_A,
+    PT_BAM,
+    PT_BGL,
+    PT_SS,
+    PT_ZB,
+    PT_RB,
+    PT_BA,
+    PT_BB,
+    PT_BS,
+    PT_BV,
+    PT_COUNT
+};
+
 static CFFGLPluginInfo PluginInfo(
     PluginFactory< class OGKBlur >,
-    "OGKB",                                     // ID unico de 4 caracteres
-    "OGK Blur Ultimate",                        // Nome no Resolume
-    2, 1,                                       // Versao API FFGL
-    1, 0,                                       // Versao do Plugin
-    FF_EFFECT,                                  // Tipo: Efeito
-    "Background Blur Ultimate Auto-Aspect",     // Descricao
-    "Edicao Ultimate Auto-Aspect"               // Autor
+    "OGKB",
+    "OGK Blur Ultimate",
+    2, 1,
+    1, 0,
+    FF_EFFECT,
+    "Background Blur Ultimate Auto-Aspect",
+    "Edicao Ultimate Auto-Aspect"
 );
 
 static const char vertexShaderCode[] = R"(#version 410 core
@@ -174,23 +198,47 @@ public:
         SetMinInputs(1);
         SetMaxInputs(1);
 
-        AddParam(ffglex::FFGLParamRange::Create("sF", 0.90f, { 0.1f, 1.3f }));
-        AddParam(ffglex::FFGLParamRange::Create("pX", 0.50f, { 0.0f, 1.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("pY", 0.50f, { 0.0f, 1.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("cX", 0.00f, { 0.0f, 0.45f }));
-        AddParam(ffglex::FFGLParamRange::Create("cY", 0.00f, { 0.0f, 0.45f }));
-        AddParam(ffglex::FFGLParamRange::Create("rC", 0.035f, { 0.0f, 0.25f }));
-        AddParam(ffglex::FFGLParamRange::Create("bW", 0.006f, { 0.0f, 0.05f }));
-        AddParam(ffglex::FFGLParamColor::Create("bC", { 1.0f, 1.0f, 1.0f, 1.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("bAm", 0.00f, { 0.0f, 1.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("bGl", 0.25f, { 0.0f, 1.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("sS", 0.55f, { 0.0f, 1.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("zB", 1.15f, { 1.0f, 4.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("rB", 0.00f, { -3.14159f, 3.14159f }));
-        AddParam(ffglex::FFGLParamRange::Create("bA", 28.0f, { 0.0f, 60.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("bB", 0.65f, { 0.0f, 1.5f }));
-        AddParam(ffglex::FFGLParamRange::Create("bS", 0.85f, { 0.0f, 2.0f }));
-        AddParam(ffglex::FFGLParamRange::Create("bV", 0.35f, { 0.0f, 1.0f }));
+        SetParamInfof(PT_SF,   "1. Tamanho Video",    FF_TYPE_STANDARD);
+        SetParamInfof(PT_PX,   "2. Posicao X",        FF_TYPE_XPOS);
+        SetParamInfof(PT_PY,   "3. Posicao Y",        FF_TYPE_YPOS);
+        SetParamInfof(PT_CX,   "4. Crop Laterais",    FF_TYPE_STANDARD);
+        SetParamInfof(PT_CY,   "5. Crop Topo/Base",   FF_TYPE_STANDARD);
+        SetParamInfof(PT_RC,   "6. Cantos Redondos",  FF_TYPE_STANDARD);
+        SetParamInfof(PT_BW,   "7. Espessura Borda",  FF_TYPE_STANDARD);
+        SetParamInfof(PT_BC_R, "8. Borda Vermelho",   FF_TYPE_RED);
+        SetParamInfof(PT_BC_G, "8. Borda Verde",      FF_TYPE_GREEN);
+        SetParamInfof(PT_BC_B, "8. Borda Azul",       FF_TYPE_BLUE);
+        SetParamInfof(PT_BC_A, "8. Borda Opacidade",  FF_TYPE_ALPHA);
+        SetParamInfof(PT_BAM,  "9. Borda Ambient",    FF_TYPE_STANDARD);
+        SetParamInfof(PT_BGL,  "10. Brilho Neon",     FF_TYPE_STANDARD);
+        SetParamInfof(PT_SS,   "11. Sombra",          FF_TYPE_STANDARD);
+        SetParamInfof(PT_ZB,   "12. Zoom Fundo",      FF_TYPE_STANDARD);
+        SetParamInfof(PT_RB,   "13. Rotacao Fundo",   FF_TYPE_STANDARD);
+        SetParamInfof(PT_BA,   "14. Intensidade Blur",FF_TYPE_STANDARD);
+        SetParamInfof(PT_BB,   "15. Brilho Fundo",    FF_TYPE_STANDARD);
+        SetParamInfof(PT_BS,   "16. Saturacao Fundo", FF_TYPE_STANDARD);
+        SetParamInfof(PT_BV,   "17. Vinheta",         FF_TYPE_STANDARD);
+
+        values[PT_SF]   = 0.90f;
+        values[PT_PX]   = 0.50f;
+        values[PT_PY]   = 0.50f;
+        values[PT_CX]   = 0.00f;
+        values[PT_CY]   = 0.00f;
+        values[PT_RC]   = 0.035f;
+        values[PT_BW]   = 0.006f;
+        values[PT_BC_R] = 1.00f;
+        values[PT_BC_G] = 1.00f;
+        values[PT_BC_B] = 1.00f;
+        values[PT_BC_A] = 1.00f;
+        values[PT_BAM]  = 0.00f;
+        values[PT_BGL]  = 0.25f;
+        values[PT_SS]   = 0.55f;
+        values[PT_ZB]   = 1.15f;
+        values[PT_RB]   = 0.00f;
+        values[PT_BA]   = 28.0f;
+        values[PT_BB]   = 0.65f;
+        values[PT_BS]   = 0.85f;
+        values[PT_BV]   = 0.35f;
     }
 
     FFResult InitGL(const FFGLViewportStruct* vp) override {
@@ -206,19 +254,49 @@ public:
     }
 
     FFResult ProcessOpenGL(ProcessOpenGLStruct* pGL) override {
-        if (pGL->numInputTextures < 1 || pGL->inputTextures[0] == nullptr)
+        if (pGL->numInputTextures < 1 || pGL->inputTextures == nullptr || pGL->inputTextures == nullptr)
             return FF_FAIL;
 
-        FFGLTexCoords maxCoords = GetMaxGLTexCoords(*pGL->inputTextures[0]);
         ffglex::ScopedShaderBinding shaderBinding(shader.GetGLID());
         ffglex::ScopedSamplerActivation activateSampler(0);
-        ffglex::Scoped2DTextureBinding textureBinding(pGL->inputTextures[0]->Handle);
+        ffglex::Scoped2DTextureBinding textureBinding(pGL->inputTextures->Handle);
 
         shader.Set("inputTexture", 0);
         shader.Set("resolution", (float)currentViewport.width, (float)currentViewport.height);
-        SendParams(shader);
+        shader.Set("sF",  values[PT_SF]);
+        shader.Set("pX",  values[PT_PX]);
+        shader.Set("pY",  values[PT_PY]);
+        shader.Set("cX",  values[PT_CX]);
+        shader.Set("cY",  values[PT_CY]);
+        shader.Set("rC",  values[PT_RC]);
+        shader.Set("bW",  values[PT_BW]);
+        shader.Set("bC",  values[PT_BC_R], values[PT_BC_G], values[PT_BC_B], values[PT_BC_A]);
+        shader.Set("bAm", values[PT_BAM]);
+        shader.Set("bGl", values[PT_BGL]);
+        shader.Set("sS",  values[PT_SS]);
+        shader.Set("zB",  values[PT_ZB]);
+        shader.Set("rB",  values[PT_RB]);
+        shader.Set("bA",  values[PT_BA]);
+        shader.Set("bB",  values[PT_BB]);
+        shader.Set("bS",  values[PT_BS]);
+        shader.Set("bV",  values[PT_BV]);
+
         quad.Draw();
         return FF_SUCCESS;
+    }
+
+    FFResult SetFloatParameter(unsigned int dwIndex, float value) override {
+        if (dwIndex < PT_COUNT) {
+            values[dwIndex] = value;
+            return FF_SUCCESS;
+        }
+        return FF_FAIL;
+    }
+
+    float GetFloatParameter(unsigned int dwIndex) override {
+        if (dwIndex < PT_COUNT)
+            return values[dwIndex];
+        return 0.0f;
     }
 
     FFResult DeInitGL() override {
@@ -229,5 +307,3 @@ public:
 
 private:
     ffglex::FFGLShader shader;
-    ffglex::FFGLScreenQuad quad;
-};
