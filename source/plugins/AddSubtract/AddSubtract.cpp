@@ -299,6 +299,8 @@ public:
         return 0.0f;
     }
 
-    FFResult DeInitGL() override {
-        shader.FreeGLResources();
-        quad.Release();
+ private:
+    ffglex::FFGLShader shader;
+    ffglex::FFGLScreenQuad quad;
+    float values[PT_COUNT];
+};
