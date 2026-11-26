@@ -253,13 +253,14 @@ public:
         return CFFGLPlugin::InitGL(vp);
     }
 
-    FFResult ProcessOpenGL(ProcessOpenGLStruct* pGL) override {
-        if (pGL->numInputTextures < 1 || pGL->inputTextures == nullptr || pGL->inputTextures == nullptr)
+      FFResult ProcessOpenGL(ProcessOpenGLStruct* pGL) override {
+        if (pGL->numInputTextures < 1 || pGL->inputTextures == nullptr || pGL->inputTextures[0] == nullptr)
             return FF_FAIL;
 
         ffglex::ScopedShaderBinding shaderBinding(shader.GetGLID());
         ffglex::ScopedSamplerActivation activateSampler(0);
-        ffglex::Scoped2DTextureBinding textureBinding(pGL->inputTextures->Handle);
+        ffglex::Scoped2DTextureBinding textureBinding(pGL->inputTextures[0]->Handle);
+
 
         shader.Set("inputTexture", 0);
         shader.Set("resolution", (float)currentViewport.width, (float)currentViewport.height);
