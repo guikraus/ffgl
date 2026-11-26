@@ -1,0 +1,16 @@
+name: Build OGKBlur DLL
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilar DLL com MSBuild
+        run: |
+          $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+          & $msbuild "build\windows\FFGLPlugins.sln" /p:Configuration=Release /p:Platform=x64
+      - name: Empacotar DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: OGKBlur-Plugin-Resolume
+          path: binaries\x64\Release\AddSubtract.dll
