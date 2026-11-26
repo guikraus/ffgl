@@ -219,26 +219,26 @@ public:
         SetParamInfof(PT_BS,   "16. Saturacao Fundo", FF_TYPE_STANDARD);
         SetParamInfof(PT_BV,   "17. Vinheta",         FF_TYPE_STANDARD);
 
-        values[PT_SF]   = 0.90f;
+        values[PT_SF]   = 0.70f;
         values[PT_PX]   = 0.50f;
         values[PT_PY]   = 0.50f;
         values[PT_CX]   = 0.00f;
         values[PT_CY]   = 0.00f;
-        values[PT_RC]   = 0.035f;
-        values[PT_BW]   = 0.006f;
+        values[PT_RC]   = 0.14f;
+        values[PT_BW]   = 0.12f;
         values[PT_BC_R] = 1.00f;
         values[PT_BC_G] = 1.00f;
         values[PT_BC_B] = 1.00f;
         values[PT_BC_A] = 1.00f;
         values[PT_BAM]  = 0.00f;
-        values[PT_BGL]  = 0.25f;
+        values[PT_BGL]  = 0.20f;
         values[PT_SS]   = 0.55f;
-        values[PT_ZB]   = 1.15f;
-        values[PT_RB]   = 0.00f;
-        values[PT_BA]   = 28.0f;
-        values[PT_BB]   = 0.65f;
-        values[PT_BS]   = 0.85f;
-        values[PT_BV]   = 0.35f;
+        values[PT_ZB]   = 0.05f;
+        values[PT_RB]   = 0.50f;
+        values[PT_BA]   = 0.55f;
+        values[PT_BB]   = 0.50f;
+        values[PT_BS]   = 0.50f;
+        values[PT_BV]   = 0.30f;
     }
 
     FFResult InitGL(const FFGLViewportStruct* vp) override {
@@ -253,7 +253,7 @@ public:
         return CFFGLPlugin::InitGL(vp);
     }
 
-      FFResult ProcessOpenGL(ProcessOpenGLStruct* pGL) override {
+    FFResult ProcessOpenGL(ProcessOpenGLStruct* pGL) override {
         if (pGL->numInputTextures < 1 || pGL->inputTextures == nullptr || pGL->inputTextures[0] == nullptr)
             return FF_FAIL;
 
@@ -261,25 +261,24 @@ public:
         ffglex::ScopedSamplerActivation activateSampler(0);
         ffglex::Scoped2DTextureBinding textureBinding(pGL->inputTextures[0]->Handle);
 
-
         shader.Set("inputTexture", 0);
         shader.Set("resolution", (float)currentViewport.width, (float)currentViewport.height);
-        shader.Set("sF",  values[PT_SF]);
+        shader.Set("sF",  0.1f + values[PT_SF] * 1.2f);
         shader.Set("pX",  values[PT_PX]);
         shader.Set("pY",  values[PT_PY]);
-        shader.Set("cX",  values[PT_CX]);
-        shader.Set("cY",  values[PT_CY]);
-        shader.Set("rC",  values[PT_RC]);
-        shader.Set("bW",  values[PT_BW]);
+        shader.Set("cX",  values[PT_CX] * 0.45f);
+        shader.Set("cY",  values[PT_CY] * 0.45f);
+        shader.Set("rC",  values[PT_RC] * 0.25f);
+        shader.Set("bW",  values[PT_BW] * 0.05f);
         shader.Set("bC",  values[PT_BC_R], values[PT_BC_G], values[PT_BC_B], values[PT_BC_A]);
         shader.Set("bAm", values[PT_BAM]);
         shader.Set("bGl", values[PT_BGL]);
         shader.Set("sS",  values[PT_SS]);
-        shader.Set("zB",  values[PT_ZB]);
-        shader.Set("rB",  values[PT_RB]);
-        shader.Set("bA",  values[PT_BA]);
-        shader.Set("bB",  values[PT_BB]);
-        shader.Set("bS",  values[PT_BS]);
+        shader.Set("zB",  1.0f + values[PT_ZB] * 4.0f);
+        shader.Set("rB",  (values[PT_RB] - 0.5f) * 6.283185f);
+        shader.Set("bA",  values[PT_BA] * 80.0f);
+        shader.Set("bB",  values[PT_BB] * 1.5f);
+        shader.Set("bS",  values[PT_BS] * 2.0f);
         shader.Set("bV",  values[PT_BV]);
 
         quad.Draw();
@@ -303,12 +302,3 @@ public:
     FFResult DeInitGL() override {
         shader.FreeGLResources();
         quad.Release();
-        return CFFGLPlugin::DeInitGL();
-    }
-
-private:
-    ffglex::FFGLShader shader;
-    ffglex::FFGLScreenQuad quad;
-    float values[PT_COUNT];
-};
-
