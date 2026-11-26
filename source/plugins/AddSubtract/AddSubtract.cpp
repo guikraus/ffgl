@@ -307,3 +307,7 @@ public:
 
 private:
     ffglex::FFGLShader shader;
+    ffglex::FFGLScreenQuad quad;
+    float values[PT_COUNT];
+};
+
