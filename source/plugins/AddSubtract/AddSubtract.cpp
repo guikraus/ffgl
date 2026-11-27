@@ -299,3 +299,9 @@ public:
     }
 
     float GetFloatParameter(unsigned int dwIndex) override {
+        private:
+    ffglex::FFGLShader shader;
+    ffglex::FFGLScreenQuad quad;
+    float values[PT_COUNT];
+};
+
