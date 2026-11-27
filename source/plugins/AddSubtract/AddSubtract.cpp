@@ -34,7 +34,7 @@ static CFFGLPluginInfo PluginInfo(
     2, 1,
     1, 0,
     FF_EFFECT,
-    "Background Blur Ultimate Auto-Aspect",
+    "Background Blur Ultimate Auto-Aspect Video 60FPS",
     "Edicao Ultimate Auto-Aspect"
 );
 
@@ -51,6 +51,7 @@ void main() {
 static const char fragmentShaderCode[] = R"(#version 410 core
 uniform sampler2D inputTexture;
 uniform vec2 resolution;
+uniform vec2 maxUV;
 uniform float sF;
 uniform float pX;
 uniform float pY;
@@ -77,8 +78,9 @@ float roundedBoxSDF(vec2 centerPos, vec2 size, float radius) {
     return length(max(q, vec2(0.0, 0.0))) - radius;
 }
 
-vec2 clampUV(vec2 coord, float minX, float minY, float maxX, float maxY) {
-    return vec2(clamp(coord.x, minX, maxX), clamp(coord.y, minY, maxY));
+vec2 sampleCoord(vec2 coord, float minX, float minY, float maxX, float maxY) {
+    vec2 clamped = vec2(clamp(coord.x, minX, maxX), clamp(coord.y, minY, maxY));
+    return clamped * maxUV;
 }
 
 vec3 adjustSaturation(vec3 color, float sat) {
@@ -96,15 +98,16 @@ void main() {
     float actW = max(maxX - minX, 0.01);
     float actH = max(maxY - minY, 0.01);
 
-    vec2 imgSize = vec2(textureSize(inputTexture, 0));
-    float rawImgAspect = max(imgSize.x, 1.0) / max(imgSize.y, 1.0);
+    vec2 texDim = vec2(textureSize(inputTexture, 0)) * maxUV;
+    float rawImgAspect = max(texDim.x, 1.0) / max(texDim.y, 1.0);
     float contentAspect = rawImgAspect * (actW / actH);
 
-    float safeMinX = minX + 0.001;
-    float safeMinY = minY + 0.001;
-    float safeMaxX = maxX - 0.001;
-    float safeMaxY = maxY - 0.001;
+    float safeMinX = minX + 0.002;
+    float safeMinY = minY + 0.002;
+    float safeMaxX = maxX - 0.002;
+    float safeMaxY = maxY - 0.002;
 
+    // 1. FUNDO DESFOCADO (Aspect Fill + Vogel Spiral Fast Blur)
     vec2 bgSpace = vec2((uv.x - 0.5) * screenAspect, uv.y - 0.5);
 
     float cosR = cos(rB);
@@ -122,32 +125,32 @@ void main() {
     vec2 bgNorm = (rotBg / (fillScale * zB)) + vec2(0.5, 0.5);
     vec2 bgUV = vec2(minX + bgNorm.x * actW, minY + bgNorm.y * actH);
 
-    vec2 baseCoord = clampUV(bgUV, safeMinX, safeMinY, safeMaxX, safeMaxY);
-    vec4 bgColor = texture(inputTexture, baseCoord);
+    vec4 bgColor = texture(inputTexture, sampleCoord(bgUV, safeMinX, safeMinY, safeMaxX, safeMaxY));
     float totalWeight = 1.0;
 
-    float stepX = (bA / max(resolution.x, 1.0)) * actW;
-    float stepY = (bA / max(resolution.y, 1.0)) * actH;
+    if (bA > 0.1) {
+        vec2 blurRadius = vec2((bA / max(resolution.x, 1.0)) * actW, (bA / max(resolution.y, 1.0)) * actH);
+        const float goldenAngle = 2.39996323;
+        const int samples = 20;
 
-    for (int d = 0; d < 16; d++) {
-        float angle = float(d) * 0.39269908;
-        vec2 dir = vec2(cos(angle), sin(angle));
-        for (int q = 1; q <= 4; q++) {
-            float stepFrac = float(q) * 0.25;
-            float weight = 1.0 - (stepFrac * 0.7);
-            vec2 offset = vec2(dir.x * stepX * stepFrac, dir.y * stepY * stepFrac);
-            vec2 sCoord = clampUV(bgUV + offset, safeMinX, safeMinY, safeMaxX, safeMaxY);
-            bgColor += texture(inputTexture, sCoord) * weight;
+        for (int i = 1; i <= samples; i++) {
+            float fi = float(i);
+            float rFrac = sqrt(fi / float(samples));
+            float theta = fi * goldenAngle;
+            vec2 offset = vec2(cos(theta), sin(theta)) * blurRadius * rFrac;
+            float weight = 1.0 - (rFrac * 0.5);
+            bgColor += texture(inputTexture, sampleCoord(bgUV + offset, safeMinX, safeMinY, safeMaxX, safeMaxY)) * weight;
             totalWeight += weight;
         }
+        bgColor /= totalWeight;
     }
-    bgColor /= totalWeight;
 
     vec3 finalBg = adjustSaturation(bgColor.rgb, bS) * bB;
     float distCenter = length(uv - vec2(0.5, 0.5)) * 1.4142;
     float vignette = 1.0 - smoothstep(0.4, 1.15, distCenter) * bV;
     finalBg *= vignette;
 
+    // 2. PRIMEIRO PLANO (Aspect Fit)
     vec2 fgBox = vec2(contentAspect, 1.0);
     if (contentAspect > screenAspect) {
         fgBox = vec2(screenAspect, screenAspect / contentAspect);
@@ -184,7 +187,7 @@ void main() {
     }
 
     float innerMask = 1.0 - smoothstep(-0.0015, 0.0015, dist);
-    vec4 fgColor = texture(inputTexture, clampUV(fgUV, safeMinX, safeMinY, safeMaxX, safeMaxY));
+    vec4 fgColor = texture(inputTexture, sampleCoord(fgUV, safeMinX, safeMinY, safeMaxX, safeMaxY));
     float finalFgAlpha = innerMask * fgColor.a;
     composed = mix(composed, fgColor.rgb, finalFgAlpha);
 
@@ -219,7 +222,7 @@ public:
         SetParamInfof(PT_BS,   "16. Saturacao Fundo", FF_TYPE_STANDARD);
         SetParamInfof(PT_BV,   "17. Vinheta",         FF_TYPE_STANDARD);
 
-        values[PT_SF]   = 0.70f;
+        values[PT_SF]   = 0.65f;
         values[PT_PX]   = 0.50f;
         values[PT_PY]   = 0.50f;
         values[PT_CX]   = 0.00f;
@@ -233,7 +236,7 @@ public:
         values[PT_BAM]  = 0.00f;
         values[PT_BGL]  = 0.20f;
         values[PT_SS]   = 0.55f;
-        values[PT_ZB]   = 0.05f;
+        values[PT_ZB]   = 0.10f;
         values[PT_RB]   = 0.50f;
         values[PT_BA]   = 0.55f;
         values[PT_BB]   = 0.50f;
@@ -257,12 +260,15 @@ public:
         if (pGL->numInputTextures < 1 || pGL->inputTextures == nullptr || pGL->inputTextures[0] == nullptr)
             return FF_FAIL;
 
+        FFGLTexCoords maxCoords = GetMaxGLTexCoords(*pGL->inputTextures[0]);
+
         ffglex::ScopedShaderBinding shaderBinding(shader.GetGLID());
         ffglex::ScopedSamplerActivation activateSampler(0);
         ffglex::Scoped2DTextureBinding textureBinding(pGL->inputTextures[0]->Handle);
 
         shader.Set("inputTexture", 0);
         shader.Set("resolution", (float)currentViewport.width, (float)currentViewport.height);
+        shader.Set("maxUV", maxCoords.s, maxCoords.t);
         shader.Set("sF",  0.1f + values[PT_SF] * 1.2f);
         shader.Set("pX",  values[PT_PX]);
         shader.Set("pY",  values[PT_PY]);
@@ -288,19 +294,3 @@ public:
     FFResult SetFloatParameter(unsigned int dwIndex, float value) override {
         if (dwIndex < PT_COUNT) {
             values[dwIndex] = value;
-            return FF_SUCCESS;
-        }
-        return FF_FAIL;
-    }
-
-    float GetFloatParameter(unsigned int dwIndex) override {
-        if (dwIndex < PT_COUNT)
-            return values[dwIndex];
-        return 0.0f;
-    }
-
- private:
-    ffglex::FFGLShader shader;
-    ffglex::FFGLScreenQuad quad;
-    float values[PT_COUNT];
-};
