@@ -291,6 +291,8 @@ public:
         return FF_SUCCESS;
     }
 
-    FFResult SetFloatParameter(unsigned int dwIndex, float value) override {
-        if (dwIndex < PT_COUNT) {
-            values[dwIndex] = value;
+private:
+    ffglex::FFGLShader shader;
+    ffglex::FFGLScreenQuad quad;
+    float values[PT_COUNT];
+};
